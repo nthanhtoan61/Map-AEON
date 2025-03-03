@@ -42,7 +42,7 @@ npm run dev
 
 Sau khi chạy lệnh trên:
 
-- Frontend sẽ chạy tại: http://localhost:3000
+- Frontend sẽ chạy tại: http://localhost:5173
 - Backend API sẽ chạy tại: http://localhost:5000
 
 ## Cấu trúc thư mục
