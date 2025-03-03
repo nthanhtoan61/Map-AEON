@@ -1,6 +1,6 @@
 // src/components/MapComponent.jsx
 import React, { useState, useEffect } from "react";
-import { MapContainer, TileLayer, Marker, Popup, ImageOverlay, useMapEvents, Polyline, useMap } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, ImageOverlay, useMapEvents, Polyline, useMap, CircleMarker } from "react-leaflet";
 import { useNavigate } from "react-router-dom";
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
@@ -120,6 +120,34 @@ const SetViewOnLocationSelect = ({ location }) => {
   return null;
 };
 
+// Thêm state và component cho việc chọn tầng
+const FloorSelector = ({ currentFloor, onFloorChange }) => {
+  const floors = [
+    { id: 0, name: 'Tầng trệt' },
+    { id: 1, name: 'Tầng 1' },
+    { id: 2, name: 'Tầng 2' },
+    { id: 3, name: 'Tầng 3' }
+  ];
+
+  return (
+    <div style={styles.floorSelector}>
+      {floors.map((floor) => (
+        <button
+          key={floor.id}
+          onClick={() => onFloorChange(floor.id)}
+          style={{
+            ...styles.floorButton,
+            backgroundColor: currentFloor === floor.id ? '#3498db' : '#fff',
+            color: currentFloor === floor.id ? '#fff' : '#333',
+          }}
+        >
+          {floor.name}
+        </button>
+      ))}
+    </div>
+  );
+};
+
 const AeonMallMap = () => {
   const navigate = useNavigate();
   const [selectedLocation, setSelectedLocation] = useState(null);
@@ -130,6 +158,8 @@ const AeonMallMap = () => {
   const [endLocation, setEndLocation] = useState(null);
   const [pathPoints, setPathPoints] = useState([]);
   const [searchTerm, setSearchTerm] = useState('');
+  const [travelTime, setTravelTime] = useState(null);
+  const [currentFloor, setCurrentFloor] = useState(1);
 
   // Thông tin AEON Mall
   const aeonMallInfo = {
@@ -188,30 +218,25 @@ const AeonMallMap = () => {
 
       console.log('Kết quả API:', response.data);
 
-      if (response.data && response.data.path) {
-        // Chuyển đổi mảng path thành tọa độ để vẽ polyline
-        const pathCoordinates = response.data.path.map(shopNumber => {
-          const loc = locations.find(l => l.shopNumber === shopNumber);
-          if (!loc) {
-            console.warn(`Không tìm thấy địa điểm với shopNumber: ${shopNumber}`);
-            return null;
-          }
-          return [loc.position.y, loc.position.x];
-        }).filter(Boolean);
+      if (response.data && response.data.path && response.data.path.length > 0) {
+        // Chuyển đổi path thành tọa độ để vẽ polyline
+        const pathCoordinates = response.data.path.map(location => [
+          location.position.y,
+          location.position.x
+        ]);
 
-        console.log('Tọa độ đường đi:', pathCoordinates);
         setPathPoints(pathCoordinates);
-        
-        if (pathCoordinates.length === 0) {
-          alert('Không thể vẽ đường đi vì không tìm thấy tọa độ cho các địa điểm');
-        }
+        setTravelTime({
+          seconds: response.data.totalTime,
+          distance: response.data.totalDistance
+        });
       } else {
         alert('Không thể tìm thấy đường đi giữa hai địa điểm này');
       }
-      setLoading(false);
     } catch (err) {
       console.error('Lỗi khi tìm đường:', err);
       alert('Đã xảy ra lỗi khi tìm đường: ' + (err.response?.data?.message || err.message));
+    } finally {
       setLoading(false);
     }
   };
@@ -239,6 +264,46 @@ const AeonMallMap = () => {
     location.name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
+  // Thêm component hiển thị thời gian di chuyển
+  const TravelTimeInfo = () => {
+    if (!travelTime) return null;
+
+    const { seconds, distance } = travelTime;
+    const minutes = Math.floor(seconds / 60);
+    const remainingSeconds = seconds % 60;
+
+    return (
+      <div style={styles.travelTimeContainer}>
+        <div style={styles.travelTimeBox}>
+          <FaClock style={styles.travelTimeIcon} />
+          <div style={styles.travelTimeText}>
+            <strong>Thời gian di chuyển ước tính:</strong>
+            <br />
+            {minutes > 0 ? `${minutes} phút ` : ''}{remainingSeconds} giây
+            <br />
+            <span style={{ fontSize: '13px', color: '#666' }}>
+              Khoảng cách: {distance.toFixed(1)}m
+            </span>
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  // Hàm xử lý khi thay đổi tầng
+  const handleFloorChange = (floorId) => {
+    setCurrentFloor(floorId);
+    setPathPoints([]); // Reset đường đi khi đổi tầng
+    setStartLocation(null);
+    setEndLocation(null);
+    setTravelTime(null);
+  };
+
+  // Lọc locations theo tầng hiện tại
+  const currentFloorLocations = locations.filter(
+    location => location.floor === currentFloor
+  );
+
   if (loading && locations.length === 0) return <div>Đang tải dữ liệu...</div>;
   if (error) return <div>Lỗi: {error}</div>;
 
@@ -255,6 +320,11 @@ const AeonMallMap = () => {
             style={styles.searchInput}
           />
         </div>
+        
+        <FloorSelector 
+          currentFloor={currentFloor}
+          onFloorChange={handleFloorChange}
+        />
         
         <div style={styles.directionSelector}>
           <div style={styles.locationSelector}>
@@ -333,21 +403,19 @@ const AeonMallMap = () => {
       
       <div style={{ flex: 1, position: 'relative' }}>
         <MapContainer
-          center={[400, 600]} // Điểm trung tâm của bản đồ
+          center={[400, 600]}
           zoom={0}
           style={{ height: '100%', width: '100%' }}
           crs={L.CRS.Simple}
           minZoom={-1}
           maxZoom={1}
         >
-          {/* Hiển thị hình ảnh bản đồ */}
           <ImageOverlay
-            url="/images/aeon-floor-1.jpg"
+            url={`/images/aeon-floor-${currentFloor}.jpg`}
             bounds={[[0, 0], [800, 1200]]}
           />
 
-          {/* Hiển thị các marker */}
-          {locations.map((location) => {
+          {currentFloorLocations.map((location) => {
             const IconComponent = getIconForType(location.type);
             const color = typeColors[location.type] || '#000000';
             let customIcon = createCustomIcon(IconComponent, color);
@@ -405,22 +473,43 @@ const AeonMallMap = () => {
             );
           })}
 
-          {/* Vẽ đường đi */}
-          {pathPoints.length > 0 && (
-            <Polyline
-              positions={pathPoints}
-              color="#3498db"
-              weight={5}
-              opacity={0.7}
-              dashArray="10, 10"
-            />
+          {pathPoints.length > 1 && (
+            <>
+              <Polyline
+                positions={pathPoints}
+                color="#3498db"
+                weight={4}
+                opacity={0.8}
+                dashArray="10, 10"
+              />
+              
+              {pathPoints.map((point, index) => {
+                if (index === 0 || index === pathPoints.length - 1) return null;
+                
+                return (
+                  <CircleMarker
+                    key={`waypoint-${index}`}
+                    center={point}
+                    radius={4}
+                    color="#3498db"
+                    fillColor="#ffffff"
+                    fillOpacity={1}
+                    weight={2}
+                  >
+                    <Popup>
+                      <div>Điểm trung gian {index}</div>
+                    </Popup>
+                  </CircleMarker>
+                );
+              })}
+            </>
           )}
 
-          {/* Cập nhật view khi chọn location */}
           <SetViewOnLocationSelect location={selectedLocation} />
         </MapContainer>
 
-        {/* Hiển thị chú thích */}
+        <TravelTimeInfo />
+
         <div style={styles.legend}>
           <h4>Chú thích</h4>
           <div style={styles.legendItem}>
@@ -621,7 +710,54 @@ const styles = {
     justifyContent: 'center',
     marginRight: '10px',
     fontSize: '16px'
-  }
+  },
+  travelTimeContainer: {
+    position: 'absolute',
+    top: '20px',
+    left: '50%',
+    transform: 'translateX(-50%)',
+    zIndex: 1000,
+  },
+  travelTimeBox: {
+    display: 'flex',
+    alignItems: 'center',
+    backgroundColor: 'white',
+    padding: '15px 25px',
+    borderRadius: '12px',
+    boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+  },
+  travelTimeIcon: {
+    fontSize: '28px',
+    color: '#3498db',
+    marginRight: '15px',
+  },
+  travelTimeText: {
+    fontSize: '14px',
+    lineHeight: '1.5',
+    color: '#333',
+  },
+  floorSelector: {
+    display: 'flex',
+    gap: '10px',
+    marginBottom: '15px',
+    padding: '5px',
+    backgroundColor: '#fff',
+    borderRadius: '8px',
+    boxShadow: '0 2px 5px rgba(0,0,0,0.1)',
+  },
+  floorButton: {
+    padding: '8px 15px',
+    border: '1px solid #ddd',
+    borderRadius: '6px',
+    cursor: 'pointer',
+    fontWeight: 'bold',
+    transition: 'all 0.3s ease',
+    flex: 1,
+    textAlign: 'center',
+    ':hover': {
+      backgroundColor: '#f0f0f0',
+    },
+  },
 };
 
 export default AeonMallMap;

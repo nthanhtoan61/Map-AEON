@@ -8,7 +8,11 @@
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "seed": "node src/scripts/seedLocations.js",
-    "seed:aeon": "node src/scripts/seedAeonLocations.js"
+    "seed:floor0": "node src/scripts/seeds/seedFloor0.js",
+    "seed:floor1": "node src/scripts/seeds/seedFloor1.js",
+    "seed:floor2": "node src/scripts/seeds/seedFloor2.js",
+    "seed:floor3": "node src/scripts/seeds/seedFloor3.js",
+    "seed:all": "node src/scripts/seeds/index.js"
   },
   "dependencies": {
     "express": "^4.18.2",

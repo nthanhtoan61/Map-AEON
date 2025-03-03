@@ -38,7 +38,7 @@ const MapComponent = () => {
       weekday: "10:00 - 22:00",
       weekend: "09:00 - 22:00"
     },
-    image: "/images/aeon-mall.jpg" // Thêm hình ảnh thực tế của AEON Mall
+    image: "https://lh5.googleusercontent.com/p/AF1QipOGipRExPV3KpQ-kzgmJOsChGIk6pOt5ygcAEiU=w408-h306-k-no" // Thêm hình ảnh thực tế của AEON Mall
   };
 
   // Xử lý khi click vào "Xem bản đồ bên trong"
@@ -47,7 +47,7 @@ const MapComponent = () => {
   };
 
   return (
-    <div className="map-container" style={{ height: "800px", width: "100%" }}>
+    <div className="map-container" style={{ height: "1000px", width: "100%" }}>
       <MapContainer
         center={aeonMallInfo.coordinates}
         zoom={17}

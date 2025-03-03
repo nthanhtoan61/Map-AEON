@@ -13,7 +13,7 @@ const locationSchema = new mongoose.Schema({
   type: {
     type: String,
     required: true,
-    enum: ['shop', 'restaurant', 'entertainment', 'service', 'bathroom', 'elevator', 'escalator', 'entrance', 'info', 'parking'],
+    enum: ['shop', 'restaurant', 'entertainment', 'service', 'bathroom', 'elevator', 'escalator', 'entrance', 'info', 'parking', 'mainPath'],
     default: 'shop'
   },
   category: {
@@ -48,9 +48,20 @@ const locationSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
+  isMainPath: {
+    type: Boolean,
+    default: false
+  },
   connections: [{
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Location'
+    locationId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Location'
+    },
+    travelTime: Number,
+    isMainPathConnection: {
+      type: Boolean,
+      default: false
+    }
   }]
 }, {
   timestamps: true
