@@ -30,7 +30,10 @@ npm install
 
 ```bash
 # Import dữ liệu mẫu vào database
-npm run seed:aeon
+npm run seed:floor0
+npm run seed:floor1
+npm run seed:floor2
+npm run seed:floor3
 ```
 
 ### 4. Chạy ứng dụng
